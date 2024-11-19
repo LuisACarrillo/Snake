@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
 volatile unsigned int *led_base = (unsigned int *)LED_MATRIX_0_BASE;
 volatile unsigned int *d_pad_up = (unsigned int *)D_PAD_0_UP;
 volatile unsigned int *d_pad_do = (unsigned int *)D_PAD_0_DOWN;
@@ -10,14 +11,20 @@ volatile unsigned int *d_pad_ri = (unsigned int *)D_PAD_0_RIGHT;
 
 int snakeHeadx, snakeHeady;
 int prevsnakex, prevsnakey;
+int appleX, appleY;
 
 void startGame() {
     snakeHeadx = rand() % (LED_MATRIX_0_WIDTH - 1);
     snakeHeady = rand() % (LED_MATRIX_0_HEIGHT - 1);
+    //Revisar que el spawn sea en un lugar correcto
+    if (snakeHeadx % 2 != 0) {snakeHeadx -= 1;} //si no, ajustar
+    if (snakeHeady % 2 != 0) {snakeHeady -= 1;}
+
     prevsnakex = snakeHeadx;
     prevsnakey = snakeHeady;
 
     createSnake();
+    spawnApple();
 }
 
 void createSnake() {
@@ -42,6 +49,27 @@ void updateSnake(int x, int y) {
     snakeHeadx += x;
     snakeHeady += y;
 }
+
+void spawnApple() {
+    appleX = rand() % (LED_MATRIX_0_WIDTH - 1);
+    appleY = rand() % (LED_MATRIX_0_HEIGHT - 1);
+    
+    //crea otra manzana si se genero en el mismo lugar que la cerpiente
+    if (appleX == snakeHeadx && appleY == snakeHeady) {
+        spawnApple();
+        return;}
+    
+    //Revisar que el spawn es en linea correcta
+    if (appleY % 2 != 1) {appleY -= 1;} //si no, ajustar
+    if (appleX % 2 != 1) {appleX -= 1;}
+
+    int apple_index = appleY * LED_MATRIX_0_WIDTH + appleX;
+    led_base[apple_index] = 0x00FF00;
+    led_base[apple_index + 1] = 0x00FF00;
+    led_base[apple_index + LED_MATRIX_0_WIDTH] = 0x00FF00;
+    led_base[apple_index + LED_MATRIX_0_WIDTH + 1] = 0x00FF00;
+}
+
 
 void main() {
     int x = 2, y = 0;  
