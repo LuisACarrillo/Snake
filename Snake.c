@@ -45,14 +45,14 @@ void updateSnake(int x, int y) {
 }
 
 void main() {
-    int x = 1, y = 0;  
+    int x = 2, y = 0;  
     startGame();
     
     while (1) {
-        if (*d_pad_up && y == 0) { x = 0; y = -1; }  
-        else if (*d_pad_do && y == 0) { x = 0; y = 1; } 
-        else if (*d_pad_le && x == 0) { x = -1; y = 0; } 
-        else if (*d_pad_ri && x == 0) { x = 1; y = 0; }  
+        if (*d_pad_up && y == 0) { x = 0; y = -2; }  
+        else if (*d_pad_do && y == 0) { x = 0; y = 2; } 
+        else if (*d_pad_le && x == 0) { x = -2; y = 0; } 
+        else if (*d_pad_ri && x == 0) { x = 2; y = 0; }  
 
         updateSnake(x, y);
         createSnake();
