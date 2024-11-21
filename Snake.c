@@ -9,8 +9,14 @@ volatile unsigned int *d_pad_le = (unsigned int *)D_PAD_0_LEFT;
 volatile unsigned int *d_pad_ri = (unsigned int *)D_PAD_0_RIGHT;
 volatile unsigned int *switch_0 = (unsigned int *)SWITCHES_0_BASE;
 
-int snakeHeadx, snakeHeady;
-int prevsnakex, prevsnakey;
+#define MAX_SNAKE_LENGTH 100  // Longitud máxima de la serpiente
+
+typedef struct {
+    int x, y;
+} Segment;
+
+Segment snake[MAX_SNAKE_LENGTH];
+int snakeLength = 1;  // Longitud inicial de la serpiente
 int appleX, appleY;
 int juegoActivo = 0;  // 0 = juego detenido, 1 = juego activo
 
@@ -22,44 +28,52 @@ void apagarLEDs() {
 
 void startGame() {
     apagarLEDs();  // Limpiar la pantalla antes de iniciar
-    snakeHeadx = rand() % (LED_MATRIX_0_WIDTH - 1);
-    snakeHeady = rand() % (LED_MATRIX_0_HEIGHT - 1);
+    snake[0].x = rand() % (LED_MATRIX_0_WIDTH - 1);
+    snake[0].y = rand() % (LED_MATRIX_0_HEIGHT - 1);
 
     // Asegurarnos de que las coordenadas sean válidas (pares)
-    if (snakeHeadx % 2 != 0) { snakeHeadx--; }
-    if (snakeHeady % 2 != 0) { snakeHeady--; }
+    if (snake[0].x % 2 != 0) { snake[0].x--; }
+    if (snake[0].y % 2 != 0) { snake[0].y--; }
 
-    prevsnakex = snakeHeadx;
-    prevsnakey = snakeHeady;
-
-    createSnake();
+    snakeLength = 1;  // Reiniciar la longitud de la serpiente
     spawnApple();
     juegoActivo = 1;  // Activar el juego
 }
 
-void createSnake() {
-    int prev_index = prevsnakey * LED_MATRIX_0_WIDTH + prevsnakex;
-    led_base[prev_index] = 0;
-    led_base[prev_index + 1] = 0;
-    led_base[prev_index + LED_MATRIX_0_WIDTH] = 0;
-    led_base[prev_index + LED_MATRIX_0_WIDTH + 1] = 0;
+void drawSnake() {
+    apagarLEDs();  // Limpiar LEDs antes de dibujar
 
-    int head_index = snakeHeady * LED_MATRIX_0_WIDTH + snakeHeadx;
-    led_base[head_index] = 0xFF0000;  // Color de la serpiente
-    led_base[head_index + 1] = 0xFF0000;
-    led_base[head_index + LED_MATRIX_0_WIDTH] = 0xFF0000;
-    led_base[head_index + LED_MATRIX_0_WIDTH + 1] = 0xFF0000;
+    for (int i = 0; i < snakeLength; i++) {
+        int index = snake[i].y * LED_MATRIX_0_WIDTH + snake[i].x;
+        led_base[index] = 0xFF0000;  // Color de la serpiente
+        led_base[index + 1] = 0xFF0000;
+        led_base[index + LED_MATRIX_0_WIDTH] = 0xFF0000;
+        led_base[index + LED_MATRIX_0_WIDTH + 1] = 0xFF0000;
+    }
 
-    prevsnakex = snakeHeadx;
-    prevsnakey = snakeHeady;
+    // Dibujar la manzana
+    int apple_index = appleY * LED_MATRIX_0_WIDTH + appleX;
+    led_base[apple_index] = 0x00FF00;  // Color de la manzana
+    led_base[apple_index + 1] = 0x00FF00;
+    led_base[apple_index + LED_MATRIX_0_WIDTH] = 0x00FF00;
+    led_base[apple_index + LED_MATRIX_0_WIDTH + 1] = 0x00FF00;
 }
 
-void updateSnake(int x, int y) {
-    snakeHeadx += x;
-    snakeHeady += y;
+void updateSnake(int dx, int dy) {
+    // Mover segmentos de la cola hacia adelante
+    for (int i = snakeLength - 1; i > 0; i--) {
+        snake[i] = snake[i - 1];
+    }
 
-    // Comprobar si la serpiente come la manzana
-    if (snakeHeadx == appleX && snakeHeady == appleY) {
+    // Mover la cabeza
+    snake[0].x += dx;
+    snake[0].y += dy;
+
+    // Verificar si la serpiente come la manzana
+    if (snake[0].x == appleX && snake[0].y == appleY) {
+        if (snakeLength < MAX_SNAKE_LENGTH) {
+            snakeLength++;  // Aumentar la longitud de la serpiente
+        }
         spawnApple();  // Generar una nueva manzana
     }
 }
@@ -73,38 +87,34 @@ void spawnApple() {
     if (appleY % 2 != 0) { appleY--; }
 
     // Asegurarnos de que no aparezca sobre la serpiente
-    if (appleX == snakeHeadx && appleY == snakeHeady) {
-        spawnApple();
-        return;
+    for (int i = 0; i < snakeLength; i++) {
+        if (appleX == snake[i].x && appleY == snake[i].y) {
+            spawnApple();  // Reintentar si hay conflicto
+            return;
+        }
     }
-
-    int apple_index = appleY * LED_MATRIX_0_WIDTH + appleX;
-    led_base[apple_index] = 0x00FF00;  // Color de la manzana
-    led_base[apple_index + 1] = 0x00FF00;
-    led_base[apple_index + LED_MATRIX_0_WIDTH] = 0x00FF00;
-    led_base[apple_index + LED_MATRIX_0_WIDTH + 1] = 0x00FF00;
 }
 
 void main() {
-    int x = 2, y = 0;
+    int dx = 2, dy = 0;  // Dirección inicial
 
     while (1) {
         if (*switch_0 == 1) {  // Si el switch está activado
             juegoActivo = 0;   // Detener el juego
-            apagarLEDs();
-            continue;        
+            apagarLEDs();      // Apagar todos los LEDs
+            continue;          // Saltar a la siguiente iteración
         } else if (juegoActivo == 0) {  // Si el juego estaba detenido y el switch se apagó
             startGame();  // Reiniciar el juego
         }
 
         if (juegoActivo) {  // Solo actualizar si el juego está activo
-            if (*d_pad_up && y == 0) { x = 0; y = -2; }
-            else if (*d_pad_do && y == 0) { x = 0; y = 2; }
-            else if (*d_pad_le && x == 0) { x = -2; y = 0; }
-            else if (*d_pad_ri && x == 0) { x = 2; y = 0; }
+            if (*d_pad_up && dy == 0) { dx = 0; dy = -2; }
+            else if (*d_pad_do && dy == 0) { dx = 0; dy = 2; }
+            else if (*d_pad_le && dx == 0) { dx = -2; dy = 0; }
+            else if (*d_pad_ri && dx == 0) { dx = 2; dy = 0; }
 
-            updateSnake(x, y);
-            createSnake();
+            updateSnake(dx, dy);  // Actualizar posiciones de la serpiente
+            drawSnake();          // Dibujar la serpiente y la manzana
         }
 
         for (int i = 0; i <= 10000; i++);  // Retardo
