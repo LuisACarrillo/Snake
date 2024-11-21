@@ -18,7 +18,7 @@ typedef struct {
 Segment snake[MAX_SNAKE_LENGTH];  // Arreglo para almacenar los segmentos de la serpiente
 int snakeLength = 1;              // Longitud inicial de la serpiente
 int appleX, appleY;               // Coordenadas de la manzana
-int juegoActivo = 0;              // Estado del juego (0 = detenido, 1 = activo)
+int juegoActivo = 0;              // Estado del juego
 
 void clearTail();
 void drawHead();
@@ -79,6 +79,23 @@ void spawnApple() {
     drawApple();  // Dibujar la manzana en su nueva posición
 }
 
+void checkCollisionWithBorders() {
+    Segment head = snake[0];
+    if (head.x < 0 || head.y < 0 || 
+        head.x >= LED_MATRIX_0_WIDTH || 
+        head.y >= LED_MATRIX_0_HEIGHT) {
+        gameOver();  // Detener el juego si la serpiente choca
+    }
+}
+
+void gameOver() {
+    juegoActivo = 0;  // Detener el juego
+    for (int i = 0; i < LED_MATRIX_0_WIDTH * LED_MATRIX_0_HEIGHT; i++) {
+        led_base[i] = 0;  // Apagar todos los LEDs
+    }
+}
+
+
 void startGame() {
     // Generar posición inicial de la cabeza de la serpiente
     snake[0].x = rand() % (LED_MATRIX_0_WIDTH - 1);
@@ -104,6 +121,8 @@ void updateSnake(int dx, int dy) {
     // Mover la cabeza en la dirección especificada
     snake[0].x += dx;
     snake[0].y += dy;
+    
+    checkCollisionWithBorders();  // Verificar si choca con los bordes
 
     // Verificar si la serpiente come la manzana
     if (snake[0].x == appleX && snake[0].y == appleY) {
