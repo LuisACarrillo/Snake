@@ -159,7 +159,7 @@ void main() {
     int dx = 2, dy = 0;  // Dirección inicial de la serpiente
 
     while (1) {
-        if (*switch_0 == 1) {
+        if (*switch_0 == 0) {
             if (!juegoActivo) {
                 startGame();  // Iniciar el juego si está detenido
             }
